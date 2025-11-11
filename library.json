@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "keywords": ["led", "matrix", "scroll", "text"],
   "description": "12x8 Text-Scroller for Arduino_LED_Matrix (UNO R4)",
-  "repository": { "type": "git", "url": "https://github.com/DEINUSER/MatrixScroller.git" },
+  "repository": { "type": "git", "url": "https://github.com/GameOfNicoYT/MatrixScroller.git" },
   "authors": [{ "name": "Nico", "maintainer": true }],
   "frameworks": "arduino",
   "platforms": ["renesas-ra", "atmelavr", "espressif32"],

@@ -29,11 +29,16 @@ static const uint8_t FONT5x7[][5] PROGMEM_LIKE = {
   {2,4,8,0x10,0x20},{0,0x41,0x41,0x7F,0},{4,2,1,2,4},{0,0,0,0,0x00}
 };
 
-MatrixScroller::MatrixScroller(ArduinoLEDMatrix& m): mx(m), interval(60), lastTick(0), off(0) {}
+MatrixScroller::MatrixScroller(ArduinoLEDMatrix& m)
+: mx(m), interval(60), lastTick(0), off(-12), text(),
+  repeatTarget(0), repeatCount(0), finished(false) {}
 
-void MatrixScroller::begin(uint16_t interval_ms){ interval = interval_ms; lastTick = 0; off = -12; }
-void MatrixScroller::setText(const String& s){ text = s; off = -12; }
+void MatrixScroller::begin(uint16_t interval_ms){ interval = interval_ms; lastTick = 0; reset(); }
+void MatrixScroller::setText(const String& s){ text = s; reset(); }
 void MatrixScroller::setSpeed(uint16_t interval_ms){ interval = interval_ms; }
+void MatrixScroller::setRepeat(uint32_t times){ repeatTarget = times; repeatCount = 0; finished = false; }
+void MatrixScroller::reset(){ off = -12; repeatCount = 0; finished = false; }
+bool MatrixScroller::isFinished() const { return finished; }
 
 const uint8_t* MatrixScroller::glyph(char c){
   uint8_t idx = (c < 0x20 || c > 0x7E) ? 0 : uint8_t(c - 0x20);
@@ -42,12 +47,12 @@ const uint8_t* MatrixScroller::glyph(char c){
 
 void MatrixScroller::drawWindow(uint8_t frame[8][12], const String& s, int32_t xoff){
   memset(frame, 0, 8*12);
-  int32_t totalCols = int32_t(s.length()) * 6;
+  const int32_t totalCols = int32_t(s.length()) * 6; // 5 Spalten + 1 Spacer
   for(int col=0; col<12; ++col){
-    int32_t srcCol = xoff + col;
+    const int32_t srcCol = xoff + col;
     if(srcCol < 0 || srcCol >= totalCols) continue;
-    int chIndex = srcCol / 6;
-    int inCharCol = srcCol % 6;
+    const int chIndex = srcCol / 6;
+    const int inCharCol = srcCol % 6;
     uint8_t colBits = 0;
     if(inCharCol < 5){
       const uint8_t* g = glyph(s[chIndex]);
@@ -60,14 +65,24 @@ void MatrixScroller::drawWindow(uint8_t frame[8][12], const String& s, int32_t x
 }
 
 void MatrixScroller::update(){
-  uint32_t now = millis();
+  if(finished) return;
+
+  const uint32_t now = millis();
   if(now - lastTick < interval) return;
   lastTick = now;
 
   uint8_t frame[8][12];
   drawWindow(frame, text, off);
   mx.loadPixels(&frame[0][0], 8*12);
+
   off++;
-  int32_t totalCols = int32_t(text.length()) * 6;
-  if(off > totalCols) off = -12;
+
+  const int32_t totalCols = int32_t(text.length()) * 6;
+  if(off > totalCols){
+    off = -12;                     // neuer Durchlauf
+    repeatCount++;
+    if(repeatTarget > 0 && repeatCount >= repeatTarget){
+      finished = true;             // stoppt weiteres Scrolling
+    }
+  }
 }

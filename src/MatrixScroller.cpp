@@ -1,3 +1,4 @@
+// src/MatrixScroller.cpp
 #include "MatrixScroller.h"
 
 #if defined(ARDUINO_ARCH_AVR)
@@ -25,8 +26,16 @@ static const uint8_t FONT5x7[][5] PROGMEM_LIKE = {
   {0x7F,9,9,9,6},{0x3E,0x41,0x51,0x21,0x5E},{0x7F,9,0x19,0x29,0x46},{0x46,0x49,0x49,0x49,0x31},
   {1,1,0x7F,1,1},{0x3F,0x40,0x40,0x40,0x3F},{0x1F,0x20,0x40,0x20,0x1F},{0x7F,0x20,0x18,0x20,0x7F},
   {0x63,0x14,8,0x14,0x63},{7,8,0x70,8,7},{0x61,0x51,0x49,0x45,0x43},{0,0x7F,0x41,0x41,0},
-  {2,4,8,0x10,0x20},{0,0x41,0x41,0x7F,0},{4,2,1,2,4},{0,0,0,0,0x00}
+  {2,4,8,0x10,0x20},{0,0x41,0x41,0x7F,0},{4,2,1,2,4},{0,0,0,0,0x00} // bis 0x5F
 };
+
+// einfache Ersatzglyphen für fehlende Zeichen
+static const uint8_t GLYPH_LC_I[5]   = {0,0,0x7D,0,0};         // 'i'
+static const uint8_t GLYPH_PIPE[5]   = {0,0,0x7F,0,0};         // '|'
+static const uint8_t GLYPH_LBRACE[5] = {0x08,0x36,0x41,0,0};   // '{' grob
+static const uint8_t GLYPH_RBRACE[5] = {0,0x41,0x36,0x08,0};   // '}' grob
+static const uint8_t GLYPH_TILDE[5]  = {0x08,0x04,0x08,0x10,0}; // '~'
+static const uint8_t GLYPH_BACKT[5]  = {0,0x01,0x02,0,0};      // '`'
 
 MatrixScroller::MatrixScroller(ArduinoLEDMatrix& m)
 : mx(m), interval(60), lastTick(0), off(-12), text(),
@@ -39,9 +48,25 @@ void MatrixScroller::setRepeat(uint32_t times){ repeatTarget = times; repeatCoun
 void MatrixScroller::reset(){ off = -12; repeatCount = 0; finished = false; }
 bool MatrixScroller::isFinished() const { return finished; }
 
+static inline const uint8_t* mapFallback(char c){
+  switch(c){
+    case 'i': return GLYPH_LC_I;
+    case '|': return GLYPH_PIPE;
+    case '{': return GLYPH_LBRACE;
+    case '}': return GLYPH_RBRACE;
+    case '~': return GLYPH_TILDE;
+    case '`': return GLYPH_BACKT;
+    default:  return nullptr;
+  }
+}
+
 const uint8_t* MatrixScroller::glyph(char c){
-  uint8_t idx = (c < 0x20 || c > 0x7E) ? 0 : uint8_t(c - 0x20);
-  return &FONT5x7[idx][0];
+  if(c >= 'a' && c <= 'z') c = char(c - 32); // Klein→Groß
+  if(c == '\\') c = '/';                     // Backslash ersatzweise
+  const uint8_t* fb = mapFallback(c);
+  if(fb) return fb;
+  if(c < 0x20 || c > 0x5F) return &FONT5x7[0][0]; // unbekannt → Space
+  return &FONT5x7[uint8_t(c - 0x20)][0];
 }
 
 void MatrixScroller::drawWindow(uint8_t frame[8][12], const String& s, int32_t xoff){

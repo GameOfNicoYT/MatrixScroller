@@ -1,4 +1,3 @@
-// src/MatrixScroller.cpp
 #include "MatrixScroller.h"
 
 #if defined(ARDUINO_ARCH_AVR)
@@ -47,7 +46,7 @@ const uint8_t* MatrixScroller::glyph(char c){
 
 void MatrixScroller::drawWindow(uint8_t frame[8][12], const String& s, int32_t xoff){
   memset(frame, 0, 8*12);
-  const int32_t totalCols = int32_t(s.length()) * 6; // 5 Spalten + 1 Spacer
+  const int32_t totalCols = int32_t(s.length()) * 6;
   for(int col=0; col<12; ++col){
     const int32_t srcCol = xoff + col;
     if(srcCol < 0 || srcCol >= totalCols) continue;
@@ -66,7 +65,6 @@ void MatrixScroller::drawWindow(uint8_t frame[8][12], const String& s, int32_t x
 
 void MatrixScroller::update(){
   if(finished) return;
-
   const uint32_t now = millis();
   if(now - lastTick < interval) return;
   lastTick = now;
@@ -76,13 +74,12 @@ void MatrixScroller::update(){
   mx.loadPixels(&frame[0][0], 8*12);
 
   off++;
-
   const int32_t totalCols = int32_t(text.length()) * 6;
   if(off > totalCols){
-    off = -12;                     // neuer Durchlauf
+    off = -12;
     repeatCount++;
     if(repeatTarget > 0 && repeatCount >= repeatTarget){
-      finished = true;             // stoppt weiteres Scrolling
+      finished = true;
     }
   }
 }
